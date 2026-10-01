@@ -141,3 +141,23 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# ---- 本项目专属 ----
+
+# 排行榜数据库（本地生成，含玩家成绩）
+*.db
+
+# Android / Gradle 构建产物与本机配置
+local.properties
+.gradle/
+build/
+offline-build/
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk.idsig
+debug.keystore
+
+# IDE
+.idea/
+*.iml

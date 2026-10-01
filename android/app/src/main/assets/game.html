@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>合成大西瓜 · 自定义图片版</title>
+<style>
+  :root{
+    --bg:#f4f6f9; --card:#ffffff; --line:#e6e9ef; --text:#1f2430; --sub:#7a8494;
+    --brand:#ff7a45; --brand2:#ffb03a;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    display:flex; justify-content:center; padding:16px 12px 28px;
+  }
+  .wrap{width:100%;max-width:480px}
+  header{
+    background:var(--card); border:1px solid var(--line); border-radius:16px;
+    padding:12px 14px; display:flex; align-items:center; gap:12px; margin-bottom:12px;
+    box-shadow:0 2px 10px rgba(20,30,50,.05);
+  }
+  .score-box{flex:1;min-width:0}
+  .score{font-size:30px;font-weight:800;line-height:1;letter-spacing:-.5px}
+  .score-box .best{font-size:12px;color:var(--sub);margin-top:5px}
+  .next-box{display:flex;flex-direction:column;align-items:center;gap:2px}
+  .next-box .label{font-size:11px;color:var(--sub)}
+  #nextCanvas{width:52px;height:52px;display:block}
+  .btns{display:flex;flex-direction:column;gap:6px}
+  button{
+    font:inherit;font-size:12px;cursor:pointer;border:1px solid var(--line);
+    background:#fff;color:var(--text);border-radius:9px;padding:6px 9px;transition:.15s;
+  }
+  button:hover{background:#f7f8fa;border-color:#d6dbe4}
+  button.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+  button.primary:hover{background:#ff6a2f}
+  .stage{position:relative;background:var(--card);border:1px solid var(--line);
+    border-radius:18px;overflow:hidden;box-shadow:0 2px 10px rgba(20,30,50,.05)}
+  #game{display:block;width:100%;touch-action:none}
+  .tip{margin:10px 2px 0;font-size:12px;color:var(--sub);line-height:1.7}
+  .over{position:absolute;inset:0;background:rgba(255,255,255,.86);backdrop-filter:blur(3px);
+    display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px}
+  .over.show{display:flex}
+  .over h2{margin:0;font-size:22px}
+  .over p{margin:0;color:var(--sub);font-size:13px}
+  .over .final{font-size:40px;font-weight:800;color:var(--brand)}
+
+  .modal{position:fixed;inset:0;background:rgba(20,26,38,.45);display:none;
+    align-items:center;justify-content:center;padding:16px;z-index:20}
+  .modal.show{display:flex}
+  .panel{background:#fff;border-radius:18px;width:100%;max-width:420px;max-height:86vh;
+    display:flex;flex-direction:column;overflow:hidden}
+  .panel header{display:block;border:0;border-radius:0;padding:16px 18px 10px;font-size:16px;
+    font-weight:700;border-bottom:1px solid var(--line);margin:0}
+  .panel header small{display:block;font-weight:400;font-size:12px;color:var(--sub);margin-top:4px}
+  .grid{padding:14px;overflow:auto;display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .slot{position:relative;aspect-ratio:1;border:2px dashed var(--line);border-radius:14px;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;
+    background:#fafbfc;font-size:11px;color:var(--sub);text-align:center;line-height:1.3}
+  .slot:hover{border-color:var(--brand)}
+  .slot img{width:100%;height:100%;object-fit:cover}
+  .slot .idx{position:absolute;top:3px;left:4px;font-size:10px;color:#fff;background:rgba(0,0,0,.45);
+    border-radius:6px;padding:1px 4px}
+  .slot .del{position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;
+    background:rgba(0,0,0,.5);color:#fff;font-size:12px;line-height:18px;text-align:center}
+  .panel footer{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--line)}
+  .panel footer button{flex:1;padding:10px;font-size:13px}
+  input[type=file]{display:none}
+  .rows{padding:6px 16px 14px;display:flex;flex-direction:column;gap:16px}
+  .rows label{display:block;font-size:13px}
+  .rows label span{float:right;color:var(--sub);font-variant-numeric:tabular-nums}
+  .rows input[type=range]{width:100%;margin-top:8px;accent-color:var(--brand)}
+  .rows small{display:block;color:var(--sub);font-size:11px;margin-top:4px;font-weight:400}
+  .submit-row{display:none;align-items:center;gap:8px;margin-top:4px}
+  .submit-row input{flex:1;min-width:120px;font:inherit;font-size:13px;padding:8px 10px;
+    border:1px solid var(--line);border-radius:9px;text-align:center;outline:none}
+  .submit-row input:focus{border-color:var(--brand)}
+  .submit-row button{padding:8px 14px;font-size:13px}
+  .rank-result{margin:6px 0 0;font-size:13px;color:var(--brand);font-weight:600;min-height:18px}
+  .ranklist{padding:8px 14px 14px;overflow:auto;max-height:52vh}
+  .ranklist table{width:100%;border-collapse:collapse;font-size:13px}
+  .ranklist td{padding:8px 4px;border-bottom:1px solid #f0f2f5}
+  .ranklist tr:last-child td{border-bottom:0}
+  .ranklist .no{width:34px;color:var(--sub);font-weight:700}
+  .ranklist .no.top{color:var(--brand)}
+  .ranklist .nm{flex:1}
+  .ranklist .lv{color:var(--sub);font-size:11px}
+  .ranklist .sc{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+  .ranklist .empty{text-align:center;color:var(--sub);padding:24px 0;font-size:13px}
+  .ranklist .sec{margin:16px 4px 4px;padding-bottom:4px;font-size:12px;font-weight:700;color:var(--sub);
+    display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--line)}
+  .ranklist .sec:first-child{margin-top:0}
+  .ranklist .sec small{font-weight:400;font-size:11px;opacity:.75}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="score-box">
+      <div class="score" id="score">0</div>
+      <div class="best">最高 <span id="best">0</span></div>
+    </div>
+    <div class="next-box">
+      <span class="label">下一个</span>
+      <canvas id="nextCanvas" width="120" height="120"></canvas>
+    </div>
+    <div class="btns">
+      <button id="btnImg">🎨 换图片</button>
+      <button id="btnFeel">⚙️ 手感</button>
+      <button id="btnRank">🏆 排行</button>
+      <button id="btnReset">🔄 重开</button>
+      <button id="btnSound">🔊 音效</button>
+    </div>
+  </header>
+
+  <div class="stage">
+    <canvas id="game"></canvas>
+    <div class="over" id="over">
+      <h2>装不下啦</h2>
+      <div class="final" id="finalScore">0</div>
+      <p id="overTip">再试一次？</p>
+      <div class="submit-row" id="submitRow">
+        <input id="nickname" maxlength="12" placeholder="留个昵称上榜">
+        <button class="primary" id="btnSubmit">提交成绩</button>
+      </div>
+      <p class="rank-result" id="rankResult"></p>
+      <button class="primary" id="btnAgain" style="padding:10px 22px;font-size:14px">再来一局</button>
+    </div>
+  </div>
+
+  <p class="tip">移动鼠标 / 手指选位置，点击投放。<b>相同图片</b>碰到一起就会升级；图片张数 = 关卡级数，最后一级两两相撞会消除并得高分。<br>结束规则：球<b>稳稳停</b>在橙色虚线上方约 1.2 秒才算结束——被挤得弹上去不算，期间虚线会变红提醒你。</p>
+</div>
+
+<div class="modal" id="modal">
+  <div class="panel">
+    <header>
+      自定义图片
+      <small>点击格子选图；一次多选会按顺序填进去。留空的格子不会出现在游戏里（从第 1 格起连续有效）。</small>
+    </header>
+    <div class="grid" id="grid"></div>
+    <footer>
+      <button id="btnClear">清空全部</button>
+      <button class="primary" id="btnDone">完成并重开</button>
+    </footer>
+  </div>
+</div>
+
+<div class="modal" id="feelModal">
+  <div class="panel">
+    <header>手感调节<small>拖动立即生效，并自动记住</small></header>
+    <div class="rows">
+      <label>重力 <span id="vG">2700</span>
+        <input type="range" id="rG" min="1200" max="4200" step="100">
+        <small>越大掉得越快、砸下去越有分量</small>
+      </label>
+      <label>滑度 <span id="vS">88</span>
+        <input type="range" id="rS" min="0" max="100" step="1">
+        <small>越大越滑，球落地后更容易滚开</small>
+      </label>
+      <label>弹性 <span id="vE">20</span>
+        <input type="range" id="rE" min="0" max="50" step="1">
+        <small>越大弹得越明显</small>
+      </label>
+    </div>
+    <footer>
+      <button id="btnFeelReset">恢复默认</button>
+      <button class="primary" id="btnFeelDone">完成</button>
+    </footer>
+  </div>
+</div>
+
+<div class="modal" id="rankModal">
+  <div class="panel">
+    <header>排行榜<small id="rankStats">加载中…</small></header>
+    <div class="ranklist" id="rankList"></div>
+    <footer><button class="primary" id="btnRankClose">关闭</button></footer>
+  </div>
+</div>
+
+<input type="file" id="fileInput" accept="image/*" multiple>
+<script>
+/* ===== 排行榜后端地址（可选）=====
+ * 留空 = 只用「本机榜」，离线也能看，不需要任何服务器。
+ * 想让手机上也能联网上榜，把下面改成你电脑的局域网地址，例如：
+ *   window.API_BASE = 'http://192.168.1.100:8123';
+ * 改完要重新打包 APK 才会生效。
+ */
+window.API_BASE = '';
+
+/* ===== 物理与手感参数 ===== */
+/* 物理层：圆形刚体 PBD 求解器，无依赖。
+ * 手感参数全部集中在下面的 CFG，改完刷新页面即可。
+ */
+(function (root) {
+  'use strict';
+
+  var CFG = {
+    W: 480, H: 720,
+    left: 14, right: 466,
+    top: 150,        // 容器上沿 = 警戒线
+    bottom: 700,
+    dropY: 92,
+
+    // ---- 手感 ----
+    gravity: 2700,        // 重力，越大落得越干脆
+    friction: 0.008,      // 球与球的切向摩擦：越小越滑、滚得越快（0 = 完全光滑）
+    groundFriction: 0.012,// 底部摩擦（每个子步生效一次，量级比直觉小很多）
+    restitution: 0.20,    // 碰撞弹性，落地会轻轻弹一下再滚开
+    airDrag: 0.9995,      // 空气阻尼
+    rollDamp: 0.985,      // 滚动衰减
+    dropVy: 140,          // 投放初速度
+    cooldown: 0.3,        // 两次投放最小间隔（秒）
+
+    // ---- 防"挤飞" ----
+    maxCorrection: 4,     // 每个子步允许的最大位置修正(px)，防止重叠瞬间把球弹射出去
+    maxSpeed: 1900,       // 速度硬上限（自由落体到底约 1780，不误伤正常下落）
+    ceiling: 40,          // 软天花板：球最多被挤到这个高度，不会飞出画面
+
+    // ---- 求解器 ----
+    substeps: 2,
+    iterations: 8,
+    maxLevels: 11,
+    rMin: 17, rMax: 96
+  };
+
+  function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+
+  // 依据级数生成半径表：最小 rMin，最大 rMax
+  function radiiFor(n) {
+    var out = [];
+    for (var i = 0; i < n; i++) {
+      var t = n === 1 ? 0 : i / (n - 1);
+      out.push(CFG.rMin * Math.pow(CFG.rMax / CFG.rMin, t));
+    }
+    return out;
+  }
+
+  function World(radii) {
+    this.radii = radii;
+    this.levelCount = radii.length;
+    this.bodies = [];
+    this._merges = [];
+    this._contacts = [];
+  }
+
+  World.prototype.reset = function () { this.bodies.length = 0; };
+
+  World.prototype.add = function (x, y, level) {
+    var b = {
+      x: x, y: y, px: x, py: y, ix: x, iy: y, vx: 0, vy: 0,
+      r: this.radii[level], level: level,
+      angle: 0, spin: 0, age: 0, dead: false, pop: 1,
+      onFloor: false, onWall: false
+    };
+    this.bodies.push(b);
+    return b;
+  };
+
+  World.prototype.integrate = function (dt) {
+    var bs = this.bodies;
+    for (var i = 0; i < bs.length; i++) {
+      var b = bs[i];
+      b.px = b.x; b.py = b.y;
+      b.onFloor = false; b.onWall = false;
+      b.vy += CFG.gravity * dt;
+      b.vx *= CFG.airDrag;
+      b.x += b.vx * dt;
+      b.y += b.vy * dt;
+      b.ix = b.x; b.iy = b.y;   // 积分后、约束前的位置，用于限制修正量
+      b.age += dt;
+      // 视觉旋转：按水平位移近似滚动，接触时再加一点自旋
+      b.angle += (b.vx / b.r) * dt + b.spin * dt;
+      b.spin *= CFG.rollDamp;
+      if (b.pop < 1) b.pop = Math.min(1, b.pop + dt * 6);
+    }
+  };
+
+  World.prototype.solve = function (dt) {
+    var bs = this.bodies, ITER = CFG.iterations;
+    var merges = this._merges, contacts = this._contacts;
+    merges.length = 0; contacts.length = 0;
+    var last = ITER - 1;
+
+    for (var it = 0; it < ITER; it++) {
+      for (var i = 0; i < bs.length; i++) {
+        var a = bs[i];
+        if (a.dead) continue;
+        for (var j = i + 1; j < bs.length; j++) {
+          var b = bs[j];
+          if (b.dead) continue;
+          var dx = b.x - a.x, dy = b.y - a.y;
+          var minD = a.r + b.r;
+          var d2 = dx * dx + dy * dy;
+          if (d2 >= minD * minD || d2 === 0) continue;
+          var d = Math.sqrt(d2);
+          var nx = dx / d, ny = dy / d;
+          var overlap = minD - d;
+
+          if (it === 0 && a.level === b.level) {
+            a.dead = true; b.dead = true;
+            merges.push([a, b]);
+            continue;
+          }
+
+          var ma = a.r * a.r, mb = b.r * b.r;
+          var wa = mb / (ma + mb), wb = ma / (ma + mb);
+          a.x -= nx * overlap * wa; a.y -= ny * overlap * wa;
+          b.x += nx * overlap * wb; b.y += ny * overlap * wb;
+
+          if (it === last) {
+            // 切向摩擦只在最后一次迭代做一次，避免叠代累积成"胶水"
+            var rdx = (a.x - a.px) - (b.x - b.px);
+            var rdy = (a.y - a.py) - (b.y - b.py);
+            var tx = -ny, ty = nx;
+            var td = (rdx * tx + rdy * ty) * CFG.friction;
+            a.x -= tx * td * wa; a.y -= ty * td * wa;
+            b.x += tx * td * wb; b.y += ty * td * wb;
+            // 相对滑动带一点自旋，看起来像在滚
+            a.spin -= td * 0.9 / a.r; b.spin -= td * 0.9 / b.r;
+            contacts.push(a, b, nx, ny);
+          }
+        }
+      }
+      for (var k = 0; k < bs.length; k++) {
+        var c = bs[k];
+        if (c.dead) continue;
+        if (c.x - c.r < CFG.left) { c.x = CFG.left + c.r; c.onWall = true; }
+        if (c.x + c.r > CFG.right) { c.x = CFG.right - c.r; c.onWall = true; }
+        if (c.y + c.r > CFG.bottom) { c.y = CFG.bottom - c.r; c.onFloor = true; }
+        if (c.y - c.r < CFG.ceiling) { c.y = CFG.ceiling + c.r; }
+        // 摩擦只在最后一次迭代施加一次（早先的迭代会把位置夹平，之后再判断就失效了）
+        if (it === last && c.onFloor) c.x -= (c.x - c.px) * CFG.groundFriction;
+      }
+    }
+
+    // 约束修正量封顶：宁可多花几帧慢慢挤开，也不要一帧把球弹射出去
+    var lim = CFG.maxCorrection;
+    for (var t2 = 0; t2 < bs.length; t2++) {
+      var f = bs[t2];
+      if (f.dead) continue;
+      var cx = f.x - f.ix, cy = f.y - f.iy;
+      var cd = Math.sqrt(cx * cx + cy * cy);
+      if (cd > lim) { f.x = f.ix + cx / cd * lim; f.y = f.iy + cy / cd * lim; }
+      // 边界是硬约束，不受修正量限制，否则球会被挤穿出去
+      f.x = clamp(f.x, CFG.left + f.r, CFG.right - f.r);
+      f.y = clamp(f.y, CFG.ceiling + f.r, CFG.bottom - f.r);
+    }
+
+    // 由位置差回推速度
+    for (var m = 0; m < bs.length; m++) {
+      var e = bs[m];
+      if (e.dead) continue;
+      e.vx = (e.x - e.px) / dt;
+      e.vy = (e.y - e.py) / dt;
+      var sp = Math.sqrt(e.vx * e.vx + e.vy * e.vy);
+      if (sp > CFG.maxSpeed) { e.vx *= CFG.maxSpeed / sp; e.vy *= CFG.maxSpeed / sp; }
+      // 地面 / 墙壁也要有弹性，否则球落地就被"钉"住，不会弹开滚落
+      if (e.onFloor && e.vy > 110) e.vy = -e.vy * CFG.restitution;
+      if (e.onWall && Math.abs(e.vx) > 150) e.vx = -e.vx * CFG.restitution * 0.6;
+    }
+
+    // 轻微弹性：让落地的球弹一下、更容易滚开
+    if (CFG.restitution > 0) {
+      for (var q = 0; q < contacts.length; q += 4) {
+        var a2 = contacts[q], b2 = contacts[q + 1];
+        var cnx = contacts[q + 2], cny = contacts[q + 3];
+        var rvx = b2.vx - a2.vx, rvy = b2.vy - a2.vy;
+        var vn = rvx * cnx + rvy * cny;
+        if (vn < -25) {
+          var ma2 = a2.r * a2.r, mb2 = b2.r * b2.r;
+          var wa2 = mb2 / (ma2 + mb2), wb2 = ma2 / (ma2 + mb2);
+          var jj = -vn * CFG.restitution;
+          a2.vx -= cnx * jj * wa2; a2.vy -= cny * jj * wa2;
+          b2.vx += cnx * jj * wb2; b2.vy += cny * jj * wb2;
+        }
+      }
+    }
+
+    // 处理合并
+    var events = null;
+    for (var z = 0; z < merges.length; z++) {
+      var ev = this._merge(merges[z][0], merges[z][1]);
+      if (ev) { (events || (events = [])).push(ev); }
+    }
+
+    var alive = [];
+    for (var t = 0; t < bs.length; t++) if (!bs[t].dead) alive.push(bs[t]);
+    this.bodies = alive;
+    return events;
+  };
+
+  World.prototype._merge = function (a, b) {
+    var lv = a.level;
+    var x = (a.x + b.x) / 2, y = (a.y + b.y) / 2;
+    if (lv === this.levelCount - 1) {
+      return { type: 'clear', x: x, y: y, r: a.r, level: lv };
+    }
+    var nb = this.add(x, y, lv + 1);
+    nb.x = clamp(nb.x, CFG.left + nb.r, CFG.right - nb.r);
+    nb.y = Math.min(nb.y, CFG.bottom - nb.r);
+    nb.px = nb.x; nb.py = nb.y;
+    nb.vx = (a.vx + b.vx) * 0.25;
+    nb.vy = (a.vy + b.vy) * 0.25 - 30;
+    nb.pop = 0.35;
+    nb.age = Math.max(a.age, b.age);
+    return { type: 'merge', x: x, y: y, r: nb.r, level: lv + 1 };
+  };
+
+  World.prototype.step = function (dt) {
+    var h = dt / CFG.substeps, evs = null;
+    for (var s = 0; s < CFG.substeps; s++) {
+      this.integrate(h);
+      var e = this.solve(h);
+      if (e) { evs = evs || []; for (var i = 0; i < e.length; i++) evs.push(e[i]); }
+    }
+    return evs;
+  };
+
+  root.MergePhysics = { CFG: CFG, World: World, radiiFor: radiiFor, clamp: clamp };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+/* ===== 渲染与交互 ===== */
+/* 合成大西瓜 · 自定义图片版
+ * 渲染 / 交互 / 自定义图片；物理与手感参数在 physics.js
+ */
+(function () {
+  'use strict';
+
+  var P = window.MergePhysics;
+  var CFG = P.CFG;
+  var DEFAULT_EMOJI = ['🫐', '🍒', '🍇', '🥝', '🍊', '🍎', '🍐', '🍑', '🍍', '🍈', '🍉'];
+
+  var canvas = document.getElementById('game');
+  var ctx = canvas.getContext('2d');
+  var nextCv = document.getElementById('nextCanvas');
+  var nextCtx = nextCv.getContext('2d');
+  var elScore = document.getElementById('score');
+  var elBest = document.getElementById('best');
+  var elOver = document.getElementById('over');
+  var elFinal = document.getElementById('finalScore');
+  var elOverTip = document.getElementById('overTip');
+  var elGrid = document.getElementById('grid');
+  var elModal = document.getElementById('modal');
+  var fileInput = document.getElementById('fileInput');
+
+  var images = [];
+  var sprites = [];
+  var radii = [];
+  var levelCount = CFG.maxLevels;
+  var world = new P.World(P.radiiFor(levelCount));
+
+  var particles = [];
+  var score = 0, best = 0;
+  var cur = null, nextLevel = 0, dropTimer = 0;
+  var overTimer = 0, gameOver = false;
+  var aimX = CFG.W / 2;
+  var soundOn = true;
+  var playTime = 0, maxLevelSeen = 0;
+
+  try { best = parseInt(localStorage.getItem('merge_best') || '0', 10) || 0; } catch (e) { }
+  elBest.textContent = best;
+
+  function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+  function rand(a, b) { return a + Math.random() * (b - a); }
+
+  // ---------- 贴图 ----------
+  function drawCover(g, img, x, y, w, h) {
+    var ir = img.width / img.height, tr = w / h, sw, sh, sx, sy;
+    if (ir > tr) { sh = img.height; sw = sh * tr; sx = (img.width - sw) / 2; sy = 0; }
+    else { sw = img.width; sh = sw / tr; sx = 0; sy = (img.height - sh) / 2; }
+    g.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+  }
+
+  function ring(g, size, dpr) {
+    g.beginPath();
+    g.arc(size / 2, size / 2, size / 2 - 1.2 * dpr, 0, Math.PI * 2);
+    g.strokeStyle = 'rgba(255,255,255,.9)';
+    g.lineWidth = 2.2 * dpr;
+    g.stroke();
+  }
+
+  function buildSprite(img, r) {
+    var dpr = Math.min(2, window.devicePixelRatio || 1);
+    var size = Math.max(16, Math.round(r * 2 * dpr));
+    var c = document.createElement('canvas');
+    c.width = c.height = size;
+    var g = c.getContext('2d');
+    g.save();
+    g.beginPath();
+    g.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+    g.clip();
+    drawCover(g, img, 0, 0, size, size);
+    g.restore();
+    ring(g, size, dpr);
+    return c;
+  }
+
+  function buildDefaultSprite(i, r) {
+    var dpr = Math.min(2, window.devicePixelRatio || 1);
+    var size = Math.max(16, Math.round(r * 2 * dpr));
+    var c = document.createElement('canvas');
+    c.width = c.height = size;
+    var g = c.getContext('2d');
+    var hue = (i * 34 + 12) % 360;
+    var grd = g.createRadialGradient(size * 0.36, size * 0.3, size * 0.05, size / 2, size / 2, size * 0.62);
+    grd.addColorStop(0, 'hsl(' + hue + ',95%,78%)');
+    grd.addColorStop(1, 'hsl(' + hue + ',80%,52%)');
+    g.beginPath();
+    g.arc(size / 2, size / 2, size / 2 - 1 * dpr, 0, Math.PI * 2);
+    g.fillStyle = grd;
+    g.fill();
+    g.font = Math.round(size * 0.52) + 'px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillText(DEFAULT_EMOJI[i % DEFAULT_EMOJI.length] || '●', size / 2, size * 0.54);
+    ring(g, size, dpr);
+    return c;
+  }
+
+  function rebuildAssets() {
+    var n = 0;
+    while (n < CFG.maxLevels && images[n]) n++;
+    levelCount = n >= 2 ? n : CFG.maxLevels;
+
+    radii = P.radiiFor(levelCount);
+    world = new P.World(radii);
+
+    sprites = [];
+    for (var j = 0; j < levelCount; j++) {
+      sprites.push(buildDefaultSprite(j, radii[j]));  // 占位，图片解码后替换
+      var src = (n >= 2) ? images[j] : null;
+      if (src) {
+        (function (idx, dataUrl) {
+          var img = new Image();
+          img.onload = function () {
+            sprites[idx] = buildSprite(img, radii[idx]);
+            drawNextPreview();
+          };
+          img.src = dataUrl;
+        })(j, src);
+      }
+    }
+  }
+
+  function randomLevel() {
+    var max = Math.min(levelCount - 2, 3);
+    return Math.floor(rand(0, Math.max(1, max + 1)));
+  }
+
+  function reset() {
+    world.reset();
+    particles = [];
+    score = 0;
+    playTime = 0;
+    maxLevelSeen = 0;
+    overTimer = 0;
+    gameOver = false;
+    dropTimer = 0;
+    elScore.textContent = '0';
+    elOver.classList.remove('show');
+    nextLevel = randomLevel();
+    spawnCur(nextLevel);
+    nextLevel = randomLevel();
+    drawNextPreview();
+  }
+
+  // 待投放的球：存在于 world 之外，不参与物理
+  function spawnCur(level) {
+    cur = {
+      x: clamp(aimX, CFG.left + radii[level], CFG.right - radii[level]),
+      y: CFG.dropY, r: radii[level], level: level, angle: 0, pop: 1, age: 0
+    };
+  }
+
+  function drawNextPreview() {
+    var g = nextCtx;
+    g.clearRect(0, 0, nextCv.width, nextCv.height);
+    var sp = sprites[nextLevel];
+    var s = nextCv.width * 0.86;
+    if (sp) g.drawImage(sp, (nextCv.width - s) / 2, (nextCv.height - s) / 2, s, s);
+    else {
+      g.fillStyle = '#e9edf3';
+      g.beginPath();
+      g.arc(nextCv.width / 2, nextCv.height / 2, s / 2, 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+
+  // ---------- 音效 ----------
+  var actx = null;
+  function ensureAudio() {
+    if (!actx) {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) actx = new AC();
+    }
+    if (actx && actx.state === 'suspended') actx.resume();
+  }
+  function tone(freq, dur, type, gain) {
+    if (!soundOn) return;
+    ensureAudio();
+    if (!actx) return;
+    var o = actx.createOscillator(), g = actx.createGain();
+    o.type = type || 'triangle';
+    o.frequency.setValueAtTime(freq, actx.currentTime);
+    g.gain.setValueAtTime(0, actx.currentTime);
+    g.gain.linearRampToValueAtTime(gain || 0.14, actx.currentTime + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + dur);
+    o.connect(g); g.connect(actx.destination);
+    o.start(); o.stop(actx.currentTime + dur + 0.02);
+  }
+  function sfxDrop() { tone(180, 0.09, 'sine', 0.08); }
+  function sfxMerge(level) {
+    var base = 260 + level * 55;
+    tone(base, 0.16, 'triangle', 0.13);
+    setTimeout(function () { tone(base * 1.5, 0.16, 'triangle', 0.1); }, 55);
+  }
+  function sfxClear() {
+    [523, 659, 784, 1046].forEach(function (f, i) {
+      setTimeout(function () { tone(f, 0.22, 'sine', 0.12); }, i * 70);
+    });
+  }
+
+  // ---------- 粒子 ----------
+  function burst(x, y, r, level, big) {
+    var hue = (level * 34 + 12) % 360;
+    var count = big ? 22 : 12;
+    for (var i = 0; i < count; i++) {
+      var a = rand(0, Math.PI * 2), sp = rand(90, big ? 420 : 260);
+      particles.push({
+        x: x, y: y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 60,
+        r: rand(2, 4 + r * 0.045), life: 1, color: 'hsl(' + hue + ',85%,60%)'
+      });
+    }
+  }
+
+  // ---------- 每帧 ----------
+  function stepGame(dt) {
+    playTime += dt;
+    var evs = world.step(dt);
+    if (evs) {
+      for (var i = 0; i < evs.length; i++) {
+        var ev = evs[i];
+        if (ev.level + 1 > maxLevelSeen) maxLevelSeen = ev.level + 1;
+        if (ev.type === 'merge') {
+          score += (ev.level + 1) * (ev.level + 1);
+          burst(ev.x, ev.y, ev.r, ev.level);
+          sfxMerge(ev.level);
+        } else {
+          score += (ev.level + 1) * (ev.level + 1) * 8;
+          burst(ev.x, ev.y, ev.r, ev.level, true);
+          sfxClear();
+        }
+        elScore.textContent = score;
+        if (score > best) {
+          best = score;
+          elBest.textContent = best;
+          try { localStorage.setItem('merge_best', String(best)); } catch (e) { }
+        }
+      }
+    }
+
+    for (var p = particles.length - 1; p >= 0; p--) {
+      var q = particles[p];
+      q.vy += 900 * dt;
+      q.x += q.vx * dt; q.y += q.vy * dt;
+      q.life -= dt * 1.9;
+      if (q.life <= 0) particles.splice(p, 1);
+    }
+
+    // 只有"稳稳停在线以上"才算危险；被挤得飞过线的球（速度大）不算
+    var danger = false;
+    for (var b = 0; b < world.bodies.length; b++) {
+      var o = world.bodies[b];
+      var sp = Math.abs(o.vx) + Math.abs(o.vy);
+      if (o.age > 1.5 && o.y - o.r < CFG.top - 4 && sp < 300) danger = true;
+    }
+    overTimer = danger ? overTimer + dt : Math.max(0, overTimer - dt * 2);
+    if (overTimer > 1.2 && !gameOver) endGame();
+
+    if (cur) {
+      cur.x = clamp(aimX, CFG.left + cur.r, CFG.right - cur.r);
+      cur.y = CFG.dropY;
+      cur.angle += dt * 0.4;
+    } else if (!gameOver) {
+      dropTimer -= dt;
+      if (dropTimer <= 0) {
+        spawnCur(nextLevel);
+        nextLevel = randomLevel();
+        drawNextPreview();
+      }
+    }
+  }
+
+  function drop() {
+    if (gameOver || !cur) return;
+    ensureAudio();
+    var level = cur.level;
+    var x = clamp(aimX, CFG.left + cur.r, CFG.right - cur.r);  // 用点击那一刻的位置，不等下一帧
+    cur = null;
+    dropTimer = CFG.cooldown || 0.3;
+    var b = world.add(x, CFG.dropY, level);
+    b.vy = CFG.dropVy;
+    sfxDrop();
+  }
+
+  function endGame() {
+    gameOver = true;
+    elFinal.textContent = score;
+    elOverTip.textContent = score >= best ? '新纪录！这一局手感不错' : '最高纪录 ' + best + ' 分，再试试';
+    elOver.classList.add('show');
+    // 不管有没有服务器都能上榜：没服务器就记进本机榜
+    elSubmitRow.style.display = 'flex';
+    elRankResult.textContent = '';
+    document.getElementById('btnSubmit').textContent = API_ON ? '提交成绩' : '记入本机榜';
+    tone(160, 0.5, 'sawtooth', 0.1);
+  }
+
+  // ---------- 渲染 ----------
+  function fit() {
+    var dpr = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = CFG.W * dpr;
+    canvas.height = CFG.H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function drawSprite(b) {
+    var sp = sprites[b.level];
+    var s = 0.55 + 0.45 * (b.pop || 1);
+    var r = b.r * s;
+    ctx.save();
+    ctx.translate(b.x, b.y);
+    ctx.rotate(b.angle);
+    if (sp) {
+      ctx.drawImage(sp, -r, -r, r * 2, r * 2);
+    } else {
+      ctx.fillStyle = '#e9edf3';
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+
+  function render() {
+    ctx.clearRect(0, 0, CFG.W, CFG.H);
+
+    var tg = ctx.createLinearGradient(0, 0, 0, CFG.top);
+    tg.addColorStop(0, '#fff7ec');
+    tg.addColorStop(1, '#ffffff');
+    ctx.fillStyle = tg;
+    ctx.fillRect(0, 0, CFG.W, CFG.top);
+
+    ctx.fillStyle = '#fffdf7';
+    roundRect(CFG.left - 8, CFG.top, CFG.right - CFG.left + 16, CFG.bottom - CFG.top + 8, 16);
+    ctx.fill();
+
+    // 越线预警：线变红、上方泛红
+    var dr = clamp(overTimer / 1.2, 0, 1);
+    if (dr > 0.02) {
+      var gr = ctx.createLinearGradient(0, CFG.top - 46, 0, CFG.top);
+      gr.addColorStop(0, 'rgba(255,70,70,0)');
+      gr.addColorStop(1, 'rgba(255,70,70,' + (0.22 * dr).toFixed(3) + ')');
+      ctx.fillStyle = gr;
+      ctx.fillRect(CFG.left - 8, CFG.top - 46, CFG.right - CFG.left + 16, 46);
+    }
+    ctx.save();
+    ctx.setLineDash([7, 7]);
+    ctx.strokeStyle = dr > 0.02
+      ? 'rgb(255,' + Math.round(180 - 120 * dr) + ',' + Math.round(138 - 78 * dr) + ')'
+      : '#f0b48a';
+    ctx.lineWidth = 2 + 2.5 * dr;
+    ctx.beginPath();
+    ctx.moveTo(CFG.left, CFG.top + 1);
+    ctx.lineTo(CFG.right, CFG.top + 1);
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.strokeStyle = '#f2d7b8';
+    ctx.lineWidth = 5;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(CFG.left - 2, CFG.top);
+    ctx.lineTo(CFG.left - 2, CFG.bottom);
+    ctx.lineTo(CFG.right + 2, CFG.bottom);
+    ctx.lineTo(CFG.right + 2, CFG.top);
+    ctx.stroke();
+
+    if (cur && !gameOver) {
+      ctx.save();
+      ctx.setLineDash([4, 8]);
+      ctx.strokeStyle = 'rgba(255,122,69,.35)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cur.x, cur.y + cur.r);
+      ctx.lineTo(cur.x, CFG.bottom);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    for (var i = 0; i < world.bodies.length; i++) drawSprite(world.bodies[i]);
+    if (cur) drawSprite(cur);
+
+    for (var p = 0; p < particles.length; p++) {
+      var q = particles[p];
+      ctx.globalAlpha = clamp(q.life, 0, 1);
+      ctx.fillStyle = q.color;
+      ctx.beginPath();
+      ctx.arc(q.x, q.y, q.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    ctx.textAlign = 'center';
+    if (dr > 0.25) {
+      ctx.fillStyle = 'rgba(255,70,70,' + (0.55 + 0.45 * dr).toFixed(2) + ')';
+      ctx.font = 'bold 13px -apple-system,"PingFang SC","Microsoft YaHei",sans-serif';
+      ctx.fillText('⚠ 快撑不住了，把上面的球合掉！', CFG.W / 2, 26);
+    } else {
+      ctx.fillStyle = '#b9a894';
+      ctx.font = '12px -apple-system,"PingFang SC","Microsoft YaHei",sans-serif';
+      ctx.fillText('移动选位 · 点击投放', CFG.W / 2, 26);
+    }
+  }
+
+  var last = 0;
+  function loop(t) {
+    var dt = last ? Math.min(0.033, (t - last) / 1000) : 0.016;
+    last = t;
+    if (!gameOver) stepGame(dt);
+    else {
+      for (var i = particles.length - 1; i >= 0; i--) {
+        var p = particles[i];
+        p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt * 1.9;
+        if (p.life <= 0) particles.splice(i, 1);
+      }
+    }
+    render();
+    requestAnimationFrame(loop);
+  }
+
+  // ---------- 输入 ----------
+  function toLocalX(clientX) {
+    var rect = canvas.getBoundingClientRect();
+    return (clientX - rect.left) / rect.width * CFG.W;
+  }
+  // 手指点击不会先触发 pointermove，所以必须在这里立刻把待投放球挪到点击处，
+  // 否则 drop() 用的还是上一帧的位置（表现：落点偏了 / 慢半拍）
+  function syncCurX() {
+    if (cur) cur.x = clamp(aimX, CFG.left + cur.r, CFG.right - cur.r);
+  }
+  canvas.addEventListener('pointermove', function (e) { aimX = toLocalX(e.clientX); syncCurX(); });
+  canvas.addEventListener('pointerdown', function (e) {
+    aimX = toLocalX(e.clientX);
+    e.preventDefault();
+    syncCurX();
+    drop();
+  });
+  window.addEventListener('keydown', function (e) {
+    if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); syncCurX(); drop(); }
+    if (e.code === 'ArrowLeft') { aimX -= 18; syncCurX(); }
+    if (e.code === 'ArrowRight') { aimX += 18; syncCurX(); }
+  });
+
+  document.getElementById('btnReset').onclick = function () { reset(); };
+  document.getElementById('btnAgain').onclick = function () { reset(); };
+  document.getElementById('btnImg').onclick = function () { openModal(); };
+  document.getElementById('btnSound').onclick = function () {
+    soundOn = !soundOn;
+    this.textContent = soundOn ? '🔊 音效' : '🔇 静音';
+  };
+
+  // ---------- 手感面板 ----------
+  var FEEL_DEFAULT = { g: 2700, s: 88, e: 20 };   // s: 滑度 0-100，越大越滑
+  var feel = { g: FEEL_DEFAULT.g, s: FEEL_DEFAULT.s, e: FEEL_DEFAULT.e };
+  var elFeel = document.getElementById('feelModal');
+  var rG = document.getElementById('rG'), rS = document.getElementById('rS'), rE = document.getElementById('rE');
+  var vG = document.getElementById('vG'), vS = document.getElementById('vS'), vE = document.getElementById('vE');
+
+  function applyFeel() {
+    CFG.gravity = feel.g;
+    var f = 0.05 * (1 - feel.s / 100) + 0.002;
+    CFG.friction = f;
+    CFG.groundFriction = f * 1.5;
+    CFG.restitution = feel.e / 100;
+    rG.value = feel.g; rS.value = feel.s; rE.value = feel.e;
+    vG.textContent = feel.g; vS.textContent = feel.s; vE.textContent = feel.e;
+  }
+  function saveFeel() { try { localStorage.setItem('merge_feel', JSON.stringify(feel)); } catch (e) { } }
+  function bindSlider(el, key) {
+    el.addEventListener('input', function () {
+      feel[key] = parseInt(this.value, 10);
+      applyFeel();
+      saveFeel();
+    });
+  }
+  bindSlider(rG, 'g'); bindSlider(rS, 's'); bindSlider(rE, 'e');
+
+  function initFeel() {
+    var s = null;
+    try { s = JSON.parse(localStorage.getItem('merge_feel') || 'null'); } catch (e) { }
+    if (s) {
+      if (s.g) feel.g = s.g;
+      if (typeof s.s === 'number') feel.s = s.s;
+      if (typeof s.e === 'number') feel.e = s.e;
+    }
+    applyFeel();
+  }
+  document.getElementById('btnFeel').onclick = function () { elFeel.classList.add('show'); };
+  document.getElementById('btnFeelDone').onclick = function () { elFeel.classList.remove('show'); };
+  document.getElementById('btnFeelReset').onclick = function () {
+    feel.g = FEEL_DEFAULT.g; feel.s = FEEL_DEFAULT.s; feel.e = FEEL_DEFAULT.e;
+    applyFeel(); saveFeel();
+  };
+  elFeel.onclick = function (e) { if (e.target === elFeel) elFeel.classList.remove('show'); };
+
+  // ---------- 自定义图片面板 ----------
+  var slotTarget = 0;
+
+  function initImages() {
+    images = [];
+    // 文件里硬编码的图片优先级高于本地缓存
+    if (window.__PRESET_IMAGES__ && window.__PRESET_IMAGES__.length) {
+      for (var k = 0; k < CFG.maxLevels; k++) {
+        images.push(typeof window.__PRESET_IMAGES__[k] === 'string' ? window.__PRESET_IMAGES__[k] : null);
+      }
+      while (images.length < CFG.maxLevels) images.push(null);
+      return;
+    }
+    var saved = null;
+    try { saved = JSON.parse(localStorage.getItem('merge_images') || 'null'); } catch (e) { }
+    if (Array.isArray(saved)) {
+      for (var i = 0; i < CFG.maxLevels; i++) images.push(typeof saved[i] === 'string' ? saved[i] : null);
+    }
+    while (images.length < CFG.maxLevels) images.push(null);
+  }
+
+  function openModal() { renderGrid(); elModal.classList.add('show'); }
+  function closeModal() { elModal.classList.remove('show'); }
+
+  function renderGrid() {
+    elGrid.innerHTML = '';
+    for (var i = 0; i < CFG.maxLevels; i++) {
+      (function (idx) {
+        var d = document.createElement('div');
+        d.className = 'slot';
+        if (images[idx]) {
+          var im = document.createElement('img');
+          im.src = images[idx];
+          d.appendChild(im);
+          var tag = document.createElement('span');
+          tag.className = 'idx';
+          tag.textContent = '第 ' + (idx + 1) + ' 级';
+          d.appendChild(tag);
+          var del = document.createElement('span');
+          del.className = 'del';
+          del.textContent = '×';
+          del.onclick = function (ev) { ev.stopPropagation(); images[idx] = null; renderGrid(); };
+          d.appendChild(del);
+        } else {
+          d.textContent = '第 ' + (idx + 1) + ' 级\n点击选图';
+          d.style.whiteSpace = 'pre-line';
+        }
+        d.onclick = function () { slotTarget = idx; fileInput.value = ''; fileInput.click(); };
+        elGrid.appendChild(d);
+      })(i);
+    }
+  }
+
+  fileInput.onchange = function () {
+    var files = Array.prototype.slice.call(fileInput.files || []);
+    if (!files.length) return;
+    var base = slotTarget;
+    files.forEach(function (f, n) {
+      var pos = base + n;
+      if (pos >= CFG.maxLevels) return;
+      var reader = new FileReader();
+      reader.onload = function (ev) { shrink(ev.target.result, function (out) { images[pos] = out; renderGrid(); }); };
+      reader.readAsDataURL(f);
+    });
+  };
+
+  // 缩到 320px 再存 localStorage，避免超出容量
+  function shrink(dataUrl, cb) {
+    var img = new Image();
+    img.onload = function () {
+      var max = 320;
+      var w = img.naturalWidth, h = img.naturalHeight;
+      var s = Math.min(1, max / Math.max(w, h));
+      var c = document.createElement('canvas');
+      c.width = Math.round(w * s); c.height = Math.round(h * s);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      try { cb(c.toDataURL('image/png')); } catch (e) { cb(dataUrl); }
+    };
+    img.onerror = function () { cb(dataUrl); };
+    img.src = dataUrl;
+  }
+
+  document.getElementById('btnClear').onclick = function () {
+    for (var i = 0; i < CFG.maxLevels; i++) images[i] = null;
+    renderGrid();
+  };
+  document.getElementById('btnDone').onclick = function () {
+    try { localStorage.setItem('merge_images', JSON.stringify(images)); } catch (e) { }
+    rebuildAssets();
+    reset();
+    closeModal();
+  };
+  elModal.onclick = function (e) { if (e.target === elModal) closeModal(); };
+
+  // ---------- 排行榜 ----------
+  // 分两层：本机榜（localStorage，永远可用、离线也能看）+ 联网榜（连上后端时才有）
+  var API_ON = false;
+  var elRankBtn = document.getElementById('btnRank');
+  var elRankModal = document.getElementById('rankModal');
+  var elRankList = document.getElementById('rankList');
+  var elRankStats = document.getElementById('rankStats');
+  var elSubmitRow = document.getElementById('submitRow');
+  var elNick = document.getElementById('nickname');
+  var elRankResult = document.getElementById('rankResult');
+
+  function apiUrl(p) {
+    var base = (typeof window.API_BASE === 'string' && window.API_BASE) ? window.API_BASE : '';
+    return base ? base.replace(/\/+$/, '') + '/' + p : p;
+  }
+
+  function probeAPI() {
+    var hasBase = typeof window.API_BASE === 'string' && !!window.API_BASE;
+    if (!hasBase && location.protocol === 'file:') return;   // 单文件本地打开 = 纯单机
+    fetch(apiUrl('api/rank?limit=1')).then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (d && d.ok) {
+          API_ON = true;
+          elRankBtn.style.display = '';
+          var n = null;
+          try { n = localStorage.getItem('merge_nick'); } catch (e) { }
+          if (n) elNick.value = n;
+        }
+      }).catch(function () { });
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+
+  // ---- 本机榜：localStorage，谁都能用 ----
+  function localScores() {
+    try { return JSON.parse(localStorage.getItem('merge_scores') || '[]') || []; } catch (e) { return []; }
+  }
+
+  function saveLocalScore(nick, sc, lv) {
+    var arr = localScores();
+    var rec = { n: nick, s: sc, l: lv, t: Date.now() };
+    arr.push(rec);
+    arr.sort(function (a, b) { return (b.s - a.s) || (b.t - a.t); });
+    arr = arr.slice(0, 20);
+    try { localStorage.setItem('merge_scores', JSON.stringify(arr)); } catch (e) { }
+    for (var i = 0; i < arr.length; i++) if (arr[i].t === rec.t) return i + 1;
+    return 0;
+  }
+
+  function localBoardHTML() {
+    var arr = localScores();
+    if (!arr.length) return '<div class="empty">这台设备还没有记录，先玩一局吧</div>';
+    var h = '<table>';
+    for (var i = 0; i < arr.length; i++) {
+      var r = arr[i], d = new Date(r.t || Date.now());
+      var ds = (d.getMonth() + 1) + '-' + ('0' + d.getDate()).slice(-2);
+      h += '<tr><td class="no' + (i < 3 ? ' top' : '') + '">' + (i + 1) + '</td>' +
+        '<td class="nm">' + esc(r.n) +
+        '<div class="lv">最高 ' + (r.l || 0) + ' 级 · ' + ds + '</div></td>' +
+        '<td class="sc">' + r.s + '</td></tr>';
+    }
+    return h + '</table>';
+  }
+
+  function loadRank() {
+    elRankStats.textContent = API_ON ? '加载中…' : ('本机 · 共 ' + localScores().length + ' 局');
+    elRankList.innerHTML =
+      '<div class="sec">本机榜<small>只记在这台设备上</small></div>' + localBoardHTML();
+
+    if (!API_ON) return;
+
+    elRankList.insertAdjacentHTML('beforeend',
+      '<div class="sec" id="onlineSec">联网榜<small>加载中…</small></div><div id="onlineList"></div>');
+    var box = document.getElementById('onlineList');
+    var sec = document.getElementById('onlineSec');
+
+    fetch(apiUrl('api/rank?limit=20')).then(function (r) { return r.json(); })
+      .then(function (d) {
+        var rows = (d && d.list) || [];
+        if (!rows.length) { box.innerHTML = '<div class="empty">还没有人上榜，快去创个纪录</div>'; return; }
+        var h = '<table>';
+        for (var i = 0; i < rows.length; i++) {
+          var r = rows[i];
+          h += '<tr><td class="no' + (i < 3 ? ' top' : '') + '">' + (i + 1) + '</td>' +
+            '<td class="nm">' + esc(r.nickname) +
+            '<div class="lv">最高 ' + (r.max_level || 0) + ' 级 · ' + String(r.created_at || '').slice(5) + '</div></td>' +
+            '<td class="sc">' + r.score + '</td></tr>';
+        }
+        box.innerHTML = h + '</table>';
+      }).catch(function () { box.innerHTML = '<div class="empty">连不上服务器</div>'; });
+
+    fetch(apiUrl('api/stats')).then(function (r) { return r.json(); })
+      .then(function (d) {
+        var s = (d && d.stats) || {};
+        if (sec) sec.innerHTML = '联网榜<small>共 ' + (s.rounds || 0) + ' 局 · ' +
+          (s.players || 0) + ' 人 · 平均 ' + (s.avg || 0) + ' 分</small>';
+        elRankStats.textContent = '共 ' + (s.rounds || 0) + ' 局 · ' + (s.players || 0) + ' 人 · 平均 ' + (s.avg || 0) + ' 分';
+      }).catch(function () { if (sec) sec.innerHTML = '联网榜<small>连不上服务器</small>'; });
+  }
+
+  function submitScore() {
+    var nick = (elNick.value || '').trim().slice(0, 12) || '匿名玩家';
+    try { localStorage.setItem('merge_nick', nick); } catch (e) { }
+    var localRank = saveLocalScore(nick, score, maxLevelSeen);
+    if (score > best) { best = score; elBest.textContent = best; }
+
+    if (!API_ON) {
+      elRankResult.textContent = localRank ? ('已记入本机榜，第 ' + localRank + ' 名') : '已记入本机榜';
+      elSubmitRow.style.display = 'none';
+      return;
+    }
+
+    elRankResult.textContent = '提交中…';
+    fetch(apiUrl('api/score'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nickname: nick, score: score, max_level: maxLevelSeen, duration: Math.round(playTime)
+      })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d && d.ok) {
+        elRankResult.textContent = '联网第 ' + d.rank + ' 名' + (localRank ? (' · 本机第 ' + localRank + ' 名') : '');
+        elSubmitRow.style.display = 'none';
+      } else {
+        elRankResult.textContent = (d && d.error) || '提交失败（本机榜已记下）';
+      }
+    }).catch(function () { elRankResult.textContent = '连不上服务器（本机榜已记下）'; });
+  }
+
+  elRankBtn.onclick = function () { elRankModal.classList.add('show'); loadRank(); };
+  document.getElementById('btnRankClose').onclick = function () { elRankModal.classList.remove('show'); };
+  document.getElementById('btnSubmit').onclick = submitScore;
+  elNick.addEventListener('keydown', function (e) { if (e.key === 'Enter') submitScore(); });
+  elRankModal.onclick = function (e) { if (e.target === elRankModal) elRankModal.classList.remove('show'); };
+
+  // ---------- 启动 ----------
+  initFeel();
+  initImages();
+  rebuildAssets();
+  probeAPI();
+  fit();
+  window.addEventListener('resize', fit);
+  reset();
+  requestAnimationFrame(loop);
+})();
+
+</script>
+</body>
+</html>

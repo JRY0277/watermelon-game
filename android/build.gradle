@@ -1,0 +1,22 @@
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        // Gradle 9.3.0（gradle/wrapper 已锁定）能配的最高 AGP 是 9.0.x
+        // 9.1 需要 Gradle 9.3.1、9.2 需要 9.4.1、9.3 需要 9.5.0，本机都没有
+        classpath 'com.android.tools.build:gradle:9.0.0'
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}
